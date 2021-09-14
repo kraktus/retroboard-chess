@@ -270,19 +270,23 @@ class RetrogradeBoard(chess.Board):
     unmove_stack: List[UnMove] = []
     _retrostack: List[_RetrogradeBoardState] = []
     pockets: Tuple[RetrogradeBoardPocket, RetrogradeBoardPocket]
+    allow_ep: bool
 
     def __init__(self, 
                 fen: Optional[str] = chess.STARTING_FEN, 
                 pocket_w: str = "", 
-                pocket_b: str = "") -> None:
+                pocket_b: str = "",
+                allow_ep: bool = False) -> None:
         super().__init__(fen)
         self.pockets = (RetrogradeBoardPocket(pocket_b), RetrogradeBoardPocket(pocket_w))
         self.retro_turn = not self.turn
+        self.allow_ep = allow_ep
 
     def _transposition_key(self) -> Hashable:
         return (super()._transposition_key(),
                 self.retro_turn,
-                str(self.pockets[BLACK]), str(self.pockets[WHITE]))
+                str(self.pockets[BLACK]), str(self.pockets[WHITE]),
+                self.allow_ep) # Included to be taken in count for `eq`
 
     def is_valid(self) -> bool:
         """
@@ -301,6 +305,7 @@ class RetrogradeBoard(chess.Board):
         rboard = super().mirror()
         rboard.retro_turn = not self.retro_turn
         rboard.pockets = (self.pockets[WHITE].copy(), self.pockets[BLACK].copy())
+        rboard.allow_ep = self.allow_ep
         return rboard
 
     def retropop(self) -> UnMove:
@@ -404,10 +409,20 @@ class RetrogradeBoard(chess.Board):
                         yield from self.generate_pseudo_legal_uncaptures(from_square, to_square_uncapture,unpromotion=True)
 
         # The remaining unmoves are all pawn ones.
-        pawns = self.pawns & self.occupied_co[self.retro_turn] & from_mask
+        pawns = self.pawns & our_pieces & from_mask
         if not pawns:
             return
 
+        # Pawns that can potentially make a en-passant unmove.
+        ep_pawns = pawns & chess.BB_RANKS[5 if self.retro_turn else 2]
+        #print(f"before \n{chess.SquareSet(ep_pawns)}\n")
+        #print(chess.SquareSet((~self.occupied & chess.BB_RANKS[4]) << 8))
+        # Now we filter for the pawns that have an empty square above them (relative to their color), to put the pawn uncaptured.
+        if self.retro_turn:
+            ep_pawns = ep_pawns & ((~self.occupied & chess.BB_RANKS[4]) << 8)
+        else:
+            ep_pawns = ep_pawns & ((~self.occupied & chess.BB_RANKS[3]) >> 8)
+        #print(f"after \n{chess.SquareSet(ep_pawns)}")
         # Generate pawn uncaptures.
         for from_square in scan_reversed(pawns):
             targets = (
@@ -416,6 +431,10 @@ class RetrogradeBoard(chess.Board):
             for to_square in scan_reversed(targets):
                 if not chess.square_rank(to_square) in [0, 7]:
                     yield from self.generate_pseudo_legal_uncaptures(from_square, to_square)
+                    # Generate en-passant uncapture
+                    if chess.BB_SQUARES[from_square] & ep_pawns and self.allow_ep:
+                        yield UnMove(from_square, to_square,en_passant=True)
+
 
         # Prepare pawn advance generation.
         if self.retro_turn == BLACK:
