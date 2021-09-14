@@ -229,6 +229,15 @@ class TestRetrogradeBoard(unittest.TestCase):
         self.assertTrue(retrogradeboard.is_valid())
         self.assertEqual(retrogradeboard, retrogradeboard_2)
 
+    def test_retropop_after_en_passant(self):
+        retrogradeboard = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/8/5p2/PPPPP1PP/RNBQKBNR w KQkq - 0 1", pocket_w="P", pocket_b="QQ")
+        unmove = UnMove.from_retro_uci("Ef3e4")
+        retrogradeboard.retropush(unmove)
+        retrogradeboard.retropop()
+        retrogradeboard_2 = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/8/5p2/PPPPP1PP/RNBQKBNR w KQkq - 0 1", pocket_w="P", pocket_b="QQ")
+        self.assertTrue(retrogradeboard.is_valid())
+        self.assertEqual(retrogradeboard, retrogradeboard_2)
+
     def test_retropop_after_unpromotion_retropush(self):
         retrogradeboard = RetrogradeBoard(fen="r3k3/8/8/8/8/8/8/4K3 w - - 0 1",pocket_b="1")
         unmove = UnMove.from_retro_uci("Ua8a7")
