@@ -190,7 +190,7 @@ class TestRetrogradeBoard(unittest.TestCase):
         retrogradeboard = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/8/5p2/PPPPP1PP/RNBQKBNR w KQkq - 0 1", pocket_w="P")
         unmove = UnMove.from_retro_uci("Ef3e4")
         retrogradeboard.retropush(unmove)
-        retrogradeboard_2 = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/4pP2/8/PPPPP1PP/RNBQKBNR b KQkq - 0 2")
+        retrogradeboard_2 = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/4pP2/8/PPPPP1PP/RNBQKBNR b KQkq f3 0 2")
         self.assertTrue(retrogradeboard.is_valid())
         self.assertEqual(retrogradeboard, retrogradeboard_2)
 
