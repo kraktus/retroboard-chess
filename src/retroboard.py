@@ -56,6 +56,9 @@ class UnMove(chess.Move):
     def __repr__(self) -> str:
         return self.retro_uci()
 
+    def __str__(self) -> str:
+        return self.retro_uci()
+
     def retro_uci(self) -> str:
         """
         Gets a retro_UCI string for the move.

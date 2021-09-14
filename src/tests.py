@@ -35,6 +35,7 @@ class TestUnMove(unittest.TestCase):
         self.assertEqual(UnMove.from_retro_uci("Ua1a2").retro_uci(), "Ua1a2")
         self.assertEqual(UnMove.from_retro_uci("Ua1b2").retro_uci(), "Ua1b2")
         self.assertEqual(UnMove.from_retro_uci("Ec3d4").retro_uci(), "Ec3d4")
+        self.assertEqual(UnMove.from_retro_uci("Pc3d4").retro_uci(), "Pc3d4")
 
     def test_eq_(self):
         """test `to_tuple` and `__eq__`"""
@@ -491,6 +492,7 @@ class TestRetrogradeBoard(unittest.TestCase):
         """Check if the rboard with the given `fen` has only the `unmoves` legals."""
         retrogradeboard = RetrogradeBoard(fen=fen,pocket_b=pocket_b,pocket_w=pocket_w,allow_ep=allow_ep)
         if debug:
+            print("first retroboard")
             retrogradeboard.pp()
             king_mask = retrogradeboard.kings & retrogradeboard.occupied_co[not retrogradeboard.retro_turn]
             king = chess.msb(king_mask)
@@ -505,6 +507,7 @@ class TestRetrogradeBoard(unittest.TestCase):
         self.assertEqual(set(retrogradeboard.legal_unmoves), set(retrogradeboard.generate_legal_unmoves()))
         self.check_legal_unmoves(retrogradeboard, debug)
         if debug:
+            print("mirrored retroboard")
             retrogradeboard.mirror().pp()
             print(retrogradeboard.mirror().legal_unmoves)
             print(retrogradeboard.mirror().mirror().legal_unmoves)
@@ -547,9 +550,9 @@ class TestRetrogradeBoard(unittest.TestCase):
         """The only unmoves to find here is how to block the checker"""
         self.check_pos_unmoves("1k5R/7p/1K3N2/8/8/8/8/8 b - - 0 1", ["f6e8", "f6g8"])
 
-    # def test_legal_unmoves_en_passant(self):
-    #     """Check legality of basic en-passant unmove"""
-    #     self.check_pos_unmoves("1k6/8/4P3/8/8/8/nn6/Kn6 b - - 0 1", ["e6e5", "Pe6d5", "Pe6f5", "Ee6d5", "Ee6f5"], allow_ep=True, pocket_b="P")
+    def test_legal_unmoves_en_passant(self):
+        """Check legality of basic en-passant unmove"""
+        self.check_pos_unmoves("1k6/8/4P3/8/8/8/nn6/Kn6 b - - 0 1", ["e6e5", "Pe6d5", "Pe6f5", "Ee6d5", "Ee6f5"], allow_ep=True, pocket_b="P", debug=True)
 
     def test_legal_unmoves_pin(self):
         """The knight is pinned"""
