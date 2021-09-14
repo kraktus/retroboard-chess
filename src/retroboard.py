@@ -21,7 +21,7 @@ from typing import Dict, Optional, List, Iterator, Iterable, Tuple, Hashable
 ###########
 
 RETRO_UCI_REGEX = re.compile(
-    r"(?P<unpromotion>U?)"
+    r"(?P<special_move>[UE]?)"
     r"(?P<uncapture>[PNBRQ]?)"
     r"(?P<uci_part>.*)"
     )
@@ -40,9 +40,10 @@ class UnMove(chess.Move):
     """
     uncapture: Optional[chess.PieceType] = None
     unpromotion: bool = False
+    en_passant: bool = False
 
-    def to_tuple(self) -> Tuple[Square, Square, Optional[chess.PieceType], bool]:
-        return (self.from_square, self.to_square, self.uncapture, self.unpromotion)
+    def to_tuple(self) -> Tuple[Square, Square, Optional[chess.PieceType], bool, bool]:
+        return (self.from_square, self.to_square, self.uncapture, self.unpromotion, self.en_passant)
 
     def __hash__(self) -> int:
         return hash(self.to_tuple())
@@ -65,6 +66,8 @@ class UnMove(chess.Move):
         res = ""
         if self.unpromotion:
             res += "U"
+        if self.en_passant:
+            res += "E"
         if self.uncapture:
             res += chess.piece_symbol(self.uncapture).upper()
         return res + super().uci()
@@ -73,7 +76,8 @@ class UnMove(chess.Move):
         return type(self)(from_square=chess.square_mirror(self.from_square), 
                    to_square=chess.square_mirror(self.to_square),
                    uncapture=self.uncapture,
-                   unpromotion=self.unpromotion)
+                   unpromotion=self.unpromotion,
+                   en_passant=self.en_passant)
 
     @classmethod
     def from_retro_uci(cls, retro_uci: str) -> UnMove:
@@ -87,8 +91,12 @@ class UnMove(chess.Move):
         e.g: "Ue8e7". 
         An unpromotion can also be an uncapture, in this case it's noted "<PieceType>U<from_square><to_square>"
         e.g "UNe8e7"
+        -En passant: "E" then the source square of the pawn and the destination of it. 
+        When a move is en-passsant, it cannot Uncapture anything (since the pawn uncapture is already implied)
+        e.g "Ed6e5". Note than it's different than "Pd6e5". In the first example, the uncaptured pawn is in `d5`,
+        while in the second one it's in `d6`.
 
-        regex: r"U?[NBRQ]?([abcdefgh][1-8]){2}"
+        regex: r"[UE]?[NBRQ]?([abcdefgh][1-8]){2}"
 
         Note: A unmove being accepted does not means it is for sure legal, just syntaxically correct
         """
@@ -96,21 +104,24 @@ class UnMove(chess.Move):
         if not match:
             raise ValueError(f"retro_uci not matching regex: {retro_uci}")
 
-        unpromotion = match.group("unpromotion") != ""
+        unpromotion = match.group("special_move") == "U"
+        en_passant = match.group("special_move") == "E"
+        if en_passant and match.group("uncapture"):
+            raise ValueError(f"Invalid retro_uci: {retro_uci}, when setting en-passant, `uncapture` group must be left empty")
         if match.group("uncapture"):
             uncapture: Optional[chess.PieceType] = chess.Piece.from_symbol(match.group("uncapture")).piece_type
         else:
             uncapture = None
-        uci_part = match.group("uci_part")
 
         try:
-            move = chess.Move.from_uci(uci_part)
+            move = chess.Move.from_uci(match.group("uci_part"))
         except ValueError as e:
             raise ValueError(f"Invalid retro_uci: {retro_uci}")
         return cls(from_square=move.from_square, 
                    to_square=move.to_square,
                    uncapture=uncapture,
-                   unpromotion=unpromotion)
+                   unpromotion=unpromotion,
+                   en_passant=en_passant)
 
 class NotInPocket(Exception):
     def __init__(self, piece_type: chess.PieceType) -> None:
@@ -326,6 +337,10 @@ class RetrogradeBoard(chess.Board):
             self.swap_turns()
             return
 
+        # Reset en passant square.
+        ep_square = self.ep_square
+        self.ep_square = None
+
         from_bb = BB_SQUARES[unmove.from_square]
         to_bb = BB_SQUARES[unmove.to_square]
         piece_type = self._remove_piece_at(unmove.from_square)
@@ -343,6 +358,11 @@ class RetrogradeBoard(chess.Board):
         if unmove.uncapture:
             self._set_piece_at(unmove.from_square, unmove.uncapture, not self.retro_turn)
             self.pockets[not self.retro_turn].remove(unmove.uncapture)
+        # En passant
+        if unmove.en_passant:
+            uncapture_pawn_square = chess.square(chess.square_file(unmove.from_square), 4 if self.retro_turn else 3)
+            self._set_piece_at(uncapture_pawn_square, chess.PAWN, not self.retro_turn)
+            self.pockets[not self.retro_turn].remove(chess.PAWN)
         # Swap turn.
         self.swap_turns()
 

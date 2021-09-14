@@ -34,6 +34,7 @@ class TestUnMove(unittest.TestCase):
         self.assertEqual(UnMove.from_retro_uci("Qa1a8").retro_uci(), "Qa1a8")
         self.assertEqual(UnMove.from_retro_uci("Ua1a2").retro_uci(), "Ua1a2")
         self.assertEqual(UnMove.from_retro_uci("Ua1b2").retro_uci(), "Ua1b2")
+        self.assertEqual(UnMove.from_retro_uci("Ec3d4").retro_uci(), "Ec3d4")
 
     def test_eq_(self):
         """test `to_tuple` and `__eq__`"""
@@ -53,6 +54,9 @@ class TestUnMove(unittest.TestCase):
         u_7 = UnMove.from_retro_uci("Ua1b2")
         u_8 = UnMove.from_retro_uci("Ua1b2")
         self.assertEqual(u_7, u_8)
+        u_9 = UnMove.from_retro_uci("Ef3e4")
+        u_10 = UnMove.from_retro_uci("Ef3e4")
+        self.assertEqual(u_9, u_10)
 
     def test_mirror(self):
         # uci
@@ -71,6 +75,9 @@ class TestUnMove(unittest.TestCase):
         u_7 = UnMove.from_retro_uci("Ua1b2")
         u_8 = UnMove.from_retro_uci("Ua8b7")
         self.assertEqual(u_7.mirror(), u_8)
+        u_9 = UnMove.from_retro_uci("Ef3e4")
+        u_10 = UnMove.from_retro_uci("Ef6e5")
+        self.assertEqual(u_9.mirror(), u_10)
 
     def test_uncapture_retro_uci(self):
         for piece in "NBRQ":
@@ -90,6 +97,14 @@ class TestUnMove(unittest.TestCase):
         self.assertEqual(unmove.to_square, chess.H7)
         self.assertEqual(unmove.unpromotion, True)
         self.assertEqual(unmove.uncapture, None)
+
+    def test_en_passant_retro_uci(self):
+        unmove = UnMove.from_retro_uci("Eg6f5")
+        self.assertEqual(unmove.from_square, chess.G6)
+        self.assertEqual(unmove.to_square, chess.F5)
+        self.assertEqual(unmove.unpromotion, False)
+        self.assertEqual(unmove.uncapture, None)
+        self.assertEqual(unmove.en_passant, True)
 
 
 class TestRetrogradeBoardPocket(unittest.TestCase):
@@ -166,6 +181,14 @@ class TestRetrogradeBoard(unittest.TestCase):
         unmove = UnMove.from_retro_uci("Ua8a7")
         retrogradeboard.retropush(unmove)
         retrogradeboard_2 = RetrogradeBoard(fen="4k3/p7/8/8/8/8/8/4K3 b - - 0 2")
+        self.assertTrue(retrogradeboard.is_valid())
+        self.assertEqual(retrogradeboard, retrogradeboard_2)
+
+    def test_en_passant_retropush_unmove(self):
+        retrogradeboard = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/8/5p2/PPPPP1PP/RNBQKBNR w KQkq - 0 1", pocket_w="P")
+        unmove = UnMove.from_retro_uci("Ef3e4")
+        retrogradeboard.retropush(unmove)
+        retrogradeboard_2 = RetrogradeBoard(fen="rnbqkbnr/pppp1ppp/8/8/4pP2/8/PPPPP1PP/RNBQKBNR b KQkq - 0 2")
         self.assertTrue(retrogradeboard.is_valid())
         self.assertEqual(retrogradeboard, retrogradeboard_2)
 
