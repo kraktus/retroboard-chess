@@ -371,6 +371,7 @@ class RetrogradeBoard(chess.Board):
             uncapture_pawn_square = chess.square(chess.square_file(unmove.from_square), 4 if self.retro_turn else 3)
             self._set_piece_at(uncapture_pawn_square, chess.PAWN, not self.retro_turn)
             self.pockets[not self.retro_turn].remove(chess.PAWN)
+            self.ep_square = unnmove.from_square
         # Swap turn.
         self.swap_turns()
 
@@ -525,7 +526,7 @@ class RetrogradeBoard(chess.Board):
                     if not still_check_after_unmove:
                         # There is at most only one "deplacement" in such position, but it means multiple unmoves with uncapture
                         yield unmove 
-        else: #One checker
+        else: # One checker
             for unmove in self.generate_pseudo_legal_unmoves(from_mask, to_mask):
                 if self.retro_is_safe(king_mask, blockers, unmove, checkers):
                     yield unmove
