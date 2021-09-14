@@ -371,7 +371,7 @@ class RetrogradeBoard(chess.Board):
             uncapture_pawn_square = chess.square(chess.square_file(unmove.from_square), 4 if self.retro_turn else 3)
             self._set_piece_at(uncapture_pawn_square, chess.PAWN, not self.retro_turn)
             self.pockets[not self.retro_turn].remove(chess.PAWN)
-            self.ep_square = unnmove.from_square
+            self.ep_square = unmove.from_square
         # Swap turn.
         self.swap_turns()
 
