@@ -11,7 +11,7 @@ import chess
 import copy
 import re
 
-from chess import BB_ALL, BB_EMPTY, BB_SQUARES, BLACK, scan_reversed, Square, WHITE
+from chess import BB_ALL, BB_EMPTY, BB_SQUARES, BLACK, scan_reversed, Square, WHITE, shift_up, shift_down
 from dataclasses import dataclass
 
 from typing import Dict, Optional, List, Iterator, Iterable, Tuple, Hashable
@@ -382,6 +382,15 @@ class RetrogradeBoard(chess.Board):
     def generate_pseudo_legal_unmoves(self, from_mask: chess.Bitboard = BB_ALL, to_mask: chess.Bitboard = BB_ALL) -> Iterator[UnMove]:
         our_pieces = self.occupied_co[self.retro_turn]
 
+        if self.ep_square:
+            ep_bb = chess.BB_SQUARES[self.ep_square]
+            up, down = chess.msb(shift_up(ep_bb)), chess.msb(shift_down(ep_bb))
+            if self.retro_turn:
+                yield UnMove(up, down)
+            else:
+                yield UnMove(down, up)
+            return # https://www.python.org/dev/peps/pep-0479/
+
         # Generate piece unmoves.
         non_pawns = our_pieces & ~self.pawns & from_mask
         for from_square in scan_reversed(non_pawns):
@@ -567,6 +576,10 @@ class RetrogradeBoard(chess.Board):
         if not bool(not blockers & BB_SQUARES[unmove.from_square] or 
                         chess.ray(unmove.from_square, unmove.to_square) & king_mask
                         ):
+            return False
+
+        # If the move is en passant, at the end of the retro-turn our king musn't be in check.
+        if unmove.en_passant and chess.ray(unmove.from_square, self.king(self.retro_turn)) == self.pin(self.retro_turn, unmove.from_square): #type: ignore
             return False
 
         # No checker we can stop here

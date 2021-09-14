@@ -311,6 +311,16 @@ class TestRetrogradeBoard(unittest.TestCase):
         self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
         self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))
 
+    def test_pseudo_legal_unmove_en_passant_only(self):
+        retrogradeboard = RetrogradeBoard(fen="1k6/8/8/8/4P3/8/8/K7 b - e3 0 1", allow_ep=True, pocket_b="P")
+        self.assertTrue(retrogradeboard.is_valid())
+        unmoves = ["e4e2"]
+        unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
+        unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
+        self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))
+
     def test_pseudo_legal_unmove_no_pawn_unmove(self):
         """Pawn can't unmove when on the 2nd (for white) or 7th rank"""
         retrogradeboard = RetrogradeBoard(fen="1k6/8/8/8/8/8/3P2nn/6nK b - - 0 1")
@@ -496,7 +506,8 @@ class TestRetrogradeBoard(unittest.TestCase):
             retrogradeboard.pp()
             king_mask = retrogradeboard.kings & retrogradeboard.occupied_co[not retrogradeboard.retro_turn]
             king = chess.msb(king_mask)
-            print(chess.SquareSet(retrogradeboard.retro_slider_blockers(king)))
+            print(f"retro blockers: \n{chess.SquareSet(retrogradeboard.retro_slider_blockers(king))}")
+            print(f"blockers: \n{chess.SquareSet(retrogradeboard._slider_blockers(king))}")
         self.assertTrue(retrogradeboard.is_valid())
         unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
         unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
@@ -647,6 +658,10 @@ class TestRetrogradeBoard(unittest.TestCase):
     def test_legal_double_check_knight_pawn(self):
         """There can't be legal unmove when two knights are checking"""
         self.check_pos_unmoves("4k3/2N2P2/8/8/8/8/8/3K4 b - - 0 1", [])
+
+    def test_en_passant_impossible(self):
+        """En passant unmove is legal, but the move producing the en passant is not"""
+        self.check_pos_unmoves("4k3/nn6/K3P2r/nn6/8/8/8/8 b - - 0 1", ["a6b6", "Pa6b6", "e6e5", "Pe6d5", "Pe6f5"], pocket_b="P", allow_ep=True, debug=True)
 
     def test_legal_double_queens_impossible(self):
         """There can't be legal unmove when two queens are checking and *no uncapture + unpromotion*"""
