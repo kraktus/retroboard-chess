@@ -520,11 +520,15 @@ class TestRetrogradeBoard(unittest.TestCase):
         Returns the number of legal unmoves from the position"""
         counter = 0
         if debug:
-            print("Start validing move")
-        for unmove in rboard.legal_unmoves:
+            print(f"Start validing move: {rboard.legal_unmoves}")
+        for unmove in list(rboard.legal_unmoves):
             with self.subTest(rboard=rboard.fen(), unmove=unmove):
                 counter += 1
                 piece_type_moved = rboard.piece_type_at(unmove.from_square)
+                if debug:
+                    print(f"before {unmove}")
+                    rboard.pp()
+                    print(rboard.fen())
                 rboard.retropush(unmove)
                 if debug:
                     print(f"after {unmove}")
@@ -533,6 +537,8 @@ class TestRetrogradeBoard(unittest.TestCase):
                 self.assertTrue(rboard.is_valid())
                 move_corresponding_to_unmove = chess.Move(from_square=unmove.to_square,to_square=unmove.from_square,
                                                         promotion=piece_type_moved if unmove.unpromotion else None)
+                if unmove.en_passant:
+                    rboard.ep_square = unmove.from_square
                 self.assertTrue(rboard.is_legal(move_corresponding_to_unmove))
                 rboard.retropop()
                 if debug:
@@ -552,7 +558,7 @@ class TestRetrogradeBoard(unittest.TestCase):
 
     def test_legal_unmoves_en_passant(self):
         """Check legality of basic en-passant unmove"""
-        self.check_pos_unmoves("1k6/8/4P3/8/8/8/nn6/Kn6 b - - 0 1", ["e6e5", "Pe6d5", "Pe6f5", "Ee6d5", "Ee6f5"], allow_ep=True, pocket_b="P", debug=True)
+        self.check_pos_unmoves("1k6/8/4P3/8/8/8/nn6/Kn6 b - - 0 1", ["e6e5", "Pe6d5", "Pe6f5", "Ee6d5", "Ee6f5"], allow_ep=True, pocket_b="P")
 
     def test_legal_unmoves_pin(self):
         """The knight is pinned"""
