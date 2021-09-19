@@ -206,6 +206,18 @@ class TestRetrogradeBoard(unittest.TestCase):
                 self.assertTrue(retrogradeboard.is_valid())
                 self.assertEqual(retrogradeboard, retrogradeboard_2)
 
+    def test_uncastling_unmove_then_retropop(self):
+        fens = ["1k6/8/8/8/8/8/8/5RK1 b - - 0 1", "1k6/8/8/8/8/8/8/2KR4 b - - 0 1", "2kr4/8/8/8/8/8/8/2K5 w - - 0 1", "5rk1/8/8/8/8/8/8/2K5 w - - 0 1"]
+        unmoves = [UnMove.from_retro_uci("g1e1"), UnMove.from_retro_uci("c1e1"), UnMove.from_retro_uci("c8e8"), UnMove.from_retro_uci("g8e8")]
+        for unmove, fen in zip(unmoves, fens):
+            with self.subTest(fen=fen, unmove=unmove):
+                retrogradeboard = RetrogradeBoard(fen=fen)
+                retrogradeboard.retropush(unmove)
+                retrogradeboard.retropop()
+                retrogradeboard_2 = RetrogradeBoard(fen=fen)
+                self.assertTrue(retrogradeboard.is_valid())
+                self.assertEqual(retrogradeboard, retrogradeboard_2)
+
     def test_unpromotion_and_uncapture_retro_unmove(self):
         for piece in "NBRQ":
             with self.subTest(piece=piece):
