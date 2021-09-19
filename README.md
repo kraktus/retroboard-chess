@@ -4,7 +4,7 @@ A chess retrograde move generator heavily based on the python-chess library.
 
 ## Status
 
-En-passant and castling not supported for the moment. Strong test suite but lack of comparaison of perft result against a trusted source.
+Castling is not supported for the moment. Strong test suite but lack of comparaison of perft result against a trusted source.
 
 ## Installation
 
