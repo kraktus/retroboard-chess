@@ -194,6 +194,18 @@ class TestRetrogradeBoard(unittest.TestCase):
         self.assertTrue(retrogradeboard.is_valid())
         self.assertEqual(retrogradeboard, retrogradeboard_2)
 
+    def test_uncastling_unmove(self):
+        fens = ["1k6/8/8/8/8/8/8/5RK1 b - - 0 1", "1k6/8/8/8/8/8/8/2KR4 b - - 0 1", "2kr4/8/8/8/8/8/8/2K5 w - - 0 1", "5rk1/8/8/8/8/8/8/2K5 w - - 0 1"]
+        expected_fens = ["1k6/8/8/8/8/8/8/4K2R w - - 0 1", "1k6/8/8/8/8/8/8/R3K3 w - - 0 1", "r3k3/8/8/8/8/8/8/2K5 b - - 0 2", "4k2r/8/8/8/8/8/8/2K5 b - - 0 2"]
+        unmoves = [UnMove.from_retro_uci("g1e1"), UnMove.from_retro_uci("c1e1"), UnMove.from_retro_uci("c8e8"), UnMove.from_retro_uci("g8e8")]
+        for unmove, fen, expected_fen in zip(unmoves, fens, expected_fens):
+            with self.subTest(fen=fen, unmove=unmove):
+                retrogradeboard = RetrogradeBoard(fen=fen)
+                retrogradeboard.retropush(unmove)
+                retrogradeboard_2 = RetrogradeBoard(fen=expected_fen)
+                self.assertTrue(retrogradeboard.is_valid())
+                self.assertEqual(retrogradeboard, retrogradeboard_2)
+
     def test_unpromotion_and_uncapture_retro_unmove(self):
         for piece in "NBRQ":
             with self.subTest(piece=piece):
@@ -661,7 +673,7 @@ class TestRetrogradeBoard(unittest.TestCase):
 
     def test_en_passant_impossible(self):
         """En passant unmove is legal, but the move producing the en passant is not"""
-        self.check_pos_unmoves("4k3/nn6/K3P2r/nn6/8/8/8/8 b - - 0 1", ["a6b6", "Pa6b6", "e6e5", "Pe6d5", "Pe6f5"], pocket_b="P", allow_ep=True, debug=True)
+        self.check_pos_unmoves("4k3/nn6/K3P2r/nn6/8/8/8/8 b - - 0 1", ["a6b6", "Pa6b6", "e6e5", "Pe6d5", "Pe6f5"], pocket_b="P", allow_ep=True)
 
     def test_legal_double_queens_impossible(self):
         """There can't be legal unmove when two queens are checking and *no uncapture + unpromotion*"""

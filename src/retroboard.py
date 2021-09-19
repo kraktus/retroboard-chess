@@ -362,6 +362,18 @@ class RetrogradeBoard(chess.Board):
             self.pockets[self.retro_turn].decrement_unpromotion()
         else:
             self._set_piece_at(unmove.to_square, piece_type, self.retro_turn)
+        # Uncastling
+        # Cannot use `is_castling` because king already moved.
+        diff = chess.square_file(unmove.from_square) - chess.square_file(unmove.to_square)
+        if piece_type == chess.KING and abs(diff) > 1:
+            a_side = chess.square_file(unmove.from_square) == 2
+            # King already moved to the right square, only rook left.
+            if a_side:
+                self._remove_piece_at(chess.D1 if self.retro_turn == WHITE else chess.D8)
+                self._set_piece_at(chess.A1 if self.retro_turn == WHITE else chess.A8, chess.ROOK, self.retro_turn)
+            else:
+                self._remove_piece_at(chess.F1 if self.retro_turn == WHITE else chess.F8)
+                self._set_piece_at(chess.H1 if self.retro_turn == WHITE else chess.H8, chess.ROOK, self.retro_turn)
         # Uncaptures.
         if unmove.uncapture:
             self._set_piece_at(unmove.from_square, unmove.uncapture, not self.retro_turn)
