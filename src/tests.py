@@ -126,8 +126,8 @@ class TestRetrogradeBoardPocket(unittest.TestCase):
 class TestRetrogradeBoard(unittest.TestCase):
 
     def test_mirror(self):
-        board = RetrogradeBoard("r1bq1r2/pp2n3/4N2k/3pPppP/1b1n2Q1/2N5/PP3PP1/R1B1K2R w KQ g6 0 15",pocket_w="QRRP", allow_ep=True)
-        mirrored = RetrogradeBoard("r1b1k2r/pp3pp1/2n5/1B1N2q1/3PpPPp/4n2K/PP2N3/R1BQ1R2 b kq g3 0 15",pocket_b="QRRP", allow_ep=True)
+        board = RetrogradeBoard("r1bq1r2/pp2n3/4N2k/3pPppP/1b1n2Q1/2N5/PP3PP1/R1B1K2R w KQ g6 0 15",pocket_w="QRRP", allow_ep=True, uncastling_rights="qK")
+        mirrored = RetrogradeBoard("r1b1k2r/pp3pp1/2n5/1B1N2q1/3PpPPp/4n2K/PP2N3/R1BQ1R2 b kq g3 0 15",pocket_b="QRRP", allow_ep=True, uncastling_rights="Qk")
         self.assertEqual(board.mirror(), mirrored)
         self.assertEqual(board.mirror().mirror(), board)
 
@@ -349,6 +349,26 @@ class TestRetrogradeBoard(unittest.TestCase):
         retrogradeboard = RetrogradeBoard(fen="1k6/8/8/8/4P3/8/8/K7 b - e3 0 1", allow_ep=True, pocket_b="P")
         self.assertTrue(retrogradeboard.is_valid())
         unmoves = ["e4e2"]
+        unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
+        unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
+        self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))
+
+    def test_pseudo_legal_uncastling_king(self):
+        retrogradeboard = RetrogradeBoard(fen="1k6/8/8/8/8/8/5n2/3n1RK1 b - - 0 1", uncastling_rights="K")
+        self.assertTrue(retrogradeboard.is_valid())
+        unmoves = ["g1e1", "g1h1", "g1h2", "g1g2", "f1e1"]
+        unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
+        unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
+        self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))
+
+    def test_pseudo_legal_uncastling_queen(self):
+        retrogradeboard = RetrogradeBoard(fen="7k/8/8/8/8/8/3n4/2KR1n2 b - - 0 1", uncastling_rights="Q")
+        self.assertTrue(retrogradeboard.is_valid())
+        unmoves = ["c1e1", "c1b1", "c1b2", "c1c2", "d1e1"]
         unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
         unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
         self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))

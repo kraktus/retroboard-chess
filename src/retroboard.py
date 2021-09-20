@@ -11,7 +11,7 @@ import chess
 import copy
 import re
 
-from chess import BB_ALL, BB_EMPTY, BB_SQUARES, BLACK, scan_reversed, Square, WHITE, shift_up, shift_down
+from chess import BB_ALL, BB_EMPTY, BB_SQUARES, BLACK, scan_reversed, Square, WHITE, shift_up, shift_down, msb
 from dataclasses import dataclass
 
 from typing import Dict, Optional, List, Iterator, Iterable, Tuple, Hashable
@@ -321,6 +321,7 @@ class RetrogradeBoard(chess.Board):
         rboard.retro_turn = not self.retro_turn
         rboard.pockets = (self.pockets[WHITE].copy(), self.pockets[BLACK].copy())
         rboard.allow_ep = self.allow_ep
+        rboard.uncastling_rights = chess.flip_vertical(self.uncastling_rights)
         return rboard
 
     def retropop(self) -> UnMove:
@@ -452,6 +453,9 @@ class RetrogradeBoard(chess.Board):
                 if  BB_SQUARES[to_square_uncapture] & ~self.occupied:
                         yield from self.generate_pseudo_legal_uncaptures(from_square, to_square_uncapture,unpromotion=True)
 
+        # Uncastling
+        yield from self.generate_uncastling_moves(from_mask, to_mask)
+
         # The remaining unmoves are all pawn ones.
         pawns = self.pawns & our_pieces & from_mask
         if not pawns:
@@ -503,31 +507,33 @@ class RetrogradeBoard(chess.Board):
             from_square = to_square + (16 if self.retro_turn == WHITE else -16)
             yield UnMove(from_square, to_square)
 
-    # def generate_uncastling_moves(self, from_mask: chess.Bitboard = BB_ALL, to_mask: chess.Bitboard = BB_ALL) -> Iterator[UnMove]:
-    #     backrank = BB_RANK_1 if self.retro_turn == WHITE else BB_RANK_8
-    #     king = self.occupied_co[self.retro_turn] & self.kings & ~self.promoted & backrank & from_mask
-    #     king = king & -king
-    #     if not king:
-    #         return
+    def generate_uncastling_moves(self, from_mask: chess.Bitboard = BB_ALL, to_mask: chess.Bitboard = BB_ALL) -> Iterator[UnMove]:
+        backrank = chess.BB_RANK_1 if self.retro_turn == WHITE else chess.BB_RANK_8
+        king = self.occupied_co[self.retro_turn] & self.kings & ~self.promoted & backrank & from_mask
+        king = king & -king
+        if not king:
+            return
 
-    #     bb_a = chess.BB_FILE_A & backrank
-    #     bb_h = chess.BB_FILE_H & backrank
-    #     bb_e = chess.BB_FILE_E & backrank
+        bb_a = chess.BB_FILE_A & backrank
+        bb_h = chess.BB_FILE_H & backrank
+        bb_e = chess.BB_FILE_E & backrank
+        for candidate in scan_reversed(self.uncastling_rights):
+            rook = BB_SQUARES[candidate]
 
-    #     for candidate in scan_reversed(self.clean_castling_rights() & backrank & to_mask):
-    #         rook = BB_SQUARES[candidate]
+            a_side = rook > king
+            king_to = bb_e
+            rook_to = bb_a if a_side else bb_h
 
-    #         a_side = rook < king
-    #         king_to = bb_e
-    #         rook_to = bb_a if a_side else bb_h
+            king_path = chess.between(msb(king), msb(king_to))
+            rook_path = chess.between(candidate, msb(rook_to))
 
-    #         king_path = between(msb(king), msb(king_to))
-    #         rook_path = between(candidate, msb(rook_to))
+            if not ((self.occupied ^ king ^ rook) & (king_path | rook_path | king_to | rook_to) or
+                    self.retro_attacked_for_king(king_path | king, self.occupied ^ king) or
+                    self.retro_attacked_for_king(king_to, self.occupied ^ king ^ rook ^ rook_to)):
+                yield UnMove(msb(king), msb(king_to))
 
-    #         if not ((self.occupied ^ king ^ rook) & (king_path | rook_path | king_to | rook_to) or
-    #                 self._attacked_for_king(king_path | king, self.occupied ^ king) or
-    #                 self._attacked_for_king(king_to, self.occupied ^ king ^ rook ^ rook_to)):
-    #             yield self._from_chess960(self.chess960, msb(king), candidate)
+    def retro_attacked_for_king(self, path: Bitboard, occupied: Bitboard) -> bool:
+        return any(self._attackers_mask(not self.retro_turn, sq, occupied) for sq in scan_reversed(path))
 
     def generate_pseudo_legal_uncaptures(self, from_square: Square, to_square: Square, unpromotion: bool = False) -> Iterator[UnMove]:
         for pt, count in self.pockets[not self.retro_turn].pieces.items():
