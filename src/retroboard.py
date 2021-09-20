@@ -274,22 +274,34 @@ class RetrogradeBoard(chess.Board):
     _retrostack: List[_RetrogradeBoardState] = []
     pockets: Tuple[RetrogradeBoardPocket, RetrogradeBoardPocket]
     allow_ep: bool
+    uncastling_rights: chess.Bitboard = BB_EMPTY # containing the position of the ROOKS.
 
     def __init__(self, 
                 fen: Optional[str] = chess.STARTING_FEN, 
                 pocket_w: str = "", 
                 pocket_b: str = "",
-                allow_ep: bool = False) -> None:
+                allow_ep: bool = False,
+                uncastling_rights: str = "") -> None:
         super().__init__(fen)
         self.pockets = (RetrogradeBoardPocket(pocket_b), RetrogradeBoardPocket(pocket_w))
         self.retro_turn = not self.turn
         self.allow_ep = allow_ep
+        if "K" in uncastling_rights:
+            self.uncastling_rights |= BB_SQUARES[chess.F1]
+        if "k" in uncastling_rights:
+            self.uncastling_rights |= BB_SQUARES[chess.F8]
+        if "Q" in uncastling_rights:
+            self.uncastling_rights |= BB_SQUARES[chess.D1]
+        if "q" in uncastling_rights:
+            self.uncastling_rights |= BB_SQUARES[chess.D8]
 
     def _transposition_key(self) -> Hashable:
         return (super()._transposition_key(),
                 self.retro_turn,
                 str(self.pockets[BLACK]), str(self.pockets[WHITE]),
-                self.allow_ep) # Included to be taken in count for `eq`
+                # Included to be taken in count for `eq`
+                self.allow_ep,
+                self.uncastling_rights)
 
     def is_valid(self) -> bool:
         """
@@ -484,6 +496,32 @@ class RetrogradeBoard(chess.Board):
             from_square = to_square + (16 if self.retro_turn == WHITE else -16)
             yield UnMove(from_square, to_square)
 
+    # def generate_uncastling_moves(self, from_mask: chess.Bitboard = BB_ALL, to_mask: chess.Bitboard = BB_ALL) -> Iterator[UnMove]:
+    #     backrank = BB_RANK_1 if self.retro_turn == WHITE else BB_RANK_8
+    #     king = self.occupied_co[self.retro_turn] & self.kings & ~self.promoted & backrank & from_mask
+    #     king = king & -king
+    #     if not king:
+    #         return
+
+    #     bb_a = chess.BB_FILE_A & backrank
+    #     bb_h = chess.BB_FILE_H & backrank
+    #     bb_e = chess.BB_FILE_E & backrank
+
+    #     for candidate in scan_reversed(self.clean_castling_rights() & backrank & to_mask):
+    #         rook = BB_SQUARES[candidate]
+
+    #         a_side = rook < king
+    #         king_to = bb_e
+    #         rook_to = bb_a if a_side else bb_h
+
+    #         king_path = between(msb(king), msb(king_to))
+    #         rook_path = between(candidate, msb(rook_to))
+
+    #         if not ((self.occupied ^ king ^ rook) & (king_path | rook_path | king_to | rook_to) or
+    #                 self._attacked_for_king(king_path | king, self.occupied ^ king) or
+    #                 self._attacked_for_king(king_to, self.occupied ^ king ^ rook ^ rook_to)):
+    #             yield self._from_chess960(self.chess960, msb(king), candidate)
+
     def generate_pseudo_legal_uncaptures(self, from_square: Square, to_square: Square, unpromotion: bool = False) -> Iterator[UnMove]:
         for pt, count in self.pockets[not self.retro_turn].pieces.items():
                 if count and (pt != chess.PAWN or not chess.BB_BACKRANKS & chess.BB_SQUARES[from_square]):
@@ -620,11 +658,13 @@ class _RetrogradeBoardState(chess._BoardState[RetrogradeBoard]):
         self.pockets_w = rboard.pockets[WHITE].copy()
         self.pockets_b = rboard.pockets[BLACK].copy()
         self.retro_turn = rboard.retro_turn
+        self.uncastling_rights = rboard.uncastling_rights
 
     def restore(self, rboard: RetrogradeBoard) -> None:
         super().restore(rboard)
         rboard.pockets = (self.pockets_b.copy(), self.pockets_w.copy())
         rboard.retro_turn = self.retro_turn
+        rboard.uncastling_rights = self.uncastling_rights
 
 ######
 #Main#

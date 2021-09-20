@@ -135,7 +135,17 @@ class TestRetrogradeBoard(unittest.TestCase):
         self.assertEqual(RetrogradeBoard(), RetrogradeBoard())
         self.assertNotEqual(RetrogradeBoard(), RetrogradeBoard(pocket_w="Q"))        
         self.assertNotEqual(RetrogradeBoard(pocket_b="Q"), RetrogradeBoard(pocket_w="Q")) 
-        self.assertNotEqual(RetrogradeBoard(), RetrogradeBoard(allow_ep=True))  
+        self.assertNotEqual(RetrogradeBoard(), RetrogradeBoard(allow_ep=True))
+        self.assertNotEqual(RetrogradeBoard(uncastling_rights="Q"), RetrogradeBoard()) 
+        self.assertNotEqual(RetrogradeBoard(uncastling_rights="k"), RetrogradeBoard(uncastling_rights="K"))
+        self.assertEqual(RetrogradeBoard(uncastling_rights="kKqQ"), RetrogradeBoard(uncastling_rights="kKqQ"))
+
+    def test_uncastling_rights(self):
+        self.assertEqual(RetrogradeBoard().uncastling_rights, chess.BB_EMPTY)
+        self.assertEqual(RetrogradeBoard(uncastling_rights="k").uncastling_rights, chess.BB_SQUARES[chess.F8])      
+        self.assertEqual(RetrogradeBoard(uncastling_rights="K").uncastling_rights, chess.BB_SQUARES[chess.F1])
+        self.assertEqual(RetrogradeBoard(uncastling_rights="Q").uncastling_rights, chess.BB_SQUARES[chess.D1])
+        self.assertEqual(RetrogradeBoard(uncastling_rights="q").uncastling_rights, chess.BB_SQUARES[chess.D8])
 
     def test_simple_retropush_unmove(self):
         retrogradeboard = RetrogradeBoard(fen="r3k3/8/8/8/8/8/8/4K3 w - - 0 1")
