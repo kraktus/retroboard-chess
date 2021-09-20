@@ -690,10 +690,23 @@ class _RetrogradeBoardState(chess._BoardState[RetrogradeBoard]):
         rboard.glued_pieces = self.glued_pieces
 
 
+def perft(rboard: RetrogradeBoard, depth: int) -> int:
+    if depth == 0:
+        return 1
+    count = 0
+    for unmove in rboard.legal_unmoves:
+        rboard.retropush(unmove)
+        count += perft(rboard, depth - 1)
+        rboard.retropop()
+    return count
+
 ######
 #Main#
 ######
 
 
 if __name__ == "__main__":
-    pass
+    from time import time
+    rboard = RetrogradeBoard("q4N2/1p5k/3P1b2/8/6P1/4Q3/3PB1r1/2KR4 b - - 0 1",pocket_w="2PNBRQ",pocket_b="3NBRQP",allow_ep=True, uncastling_rights="Q")
+    dep = time()
+    print(f"Perft: {perft(rboard, 3)}, {time() - dep}s")
