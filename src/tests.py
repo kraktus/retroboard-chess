@@ -213,6 +213,8 @@ class TestRetrogradeBoard(unittest.TestCase):
                 retrogradeboard = RetrogradeBoard(fen=fen, uncastling_rights=r)
                 retrogradeboard.retropush(unmove)
                 retrogradeboard_2 = RetrogradeBoard(fen=expected_fen)
+                self.assertTrue(retrogradeboard.glued_pieces)
+                retrogradeboard.glued_pieces = chess.SquareSet(chess.BB_EMPTY)
                 self.assertTrue(retrogradeboard.is_valid())
                 self.assertEqual(retrogradeboard, retrogradeboard_2)
 
@@ -371,6 +373,18 @@ class TestRetrogradeBoard(unittest.TestCase):
         unmoves = ["c1e1", "c1b1", "c1b2", "c1c2", "d1e1"]
         unmoves_set = set([UnMove.from_retro_uci(i) for i in unmoves])
         unmoves_set_b = set([UnMove.from_retro_uci(i).mirror() for i in unmoves])
+        self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
+        self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))
+
+    def test_no_king_rook_move_after_uncastling(self):
+        """Once uncastled, the king and rook cannot unmove, otherwise castling would have been illegal"""
+        retrogradeboard = RetrogradeBoard(fen="7k/8/8/8/8/8/3n4/2KR1n2 b - - 0 1", uncastling_rights="Q")
+        retrogradeboard.retropush(UnMove.from_retro_uci("c1e1"))
+        retrogradeboard.retropush(UnMove.from_retro_uci("h8g8"))
+        self.assertTrue(retrogradeboard.is_valid())
+        unmoves_set = set()
+        unmoves_set_b = set()
         self.assertEqual(unmoves_set, set(retrogradeboard.generate_pseudo_legal_unmoves()))
         self.assertEqual(set(retrogradeboard.pseudo_legal_unmoves), set(retrogradeboard.generate_pseudo_legal_unmoves()))
         self.assertEqual(unmoves_set_b, set(retrogradeboard.mirror().generate_pseudo_legal_unmoves()))

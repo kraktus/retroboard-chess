@@ -269,12 +269,6 @@ class RetrogradeBoard(chess.Board):
     when it's black to play, it means that white made the last move (and we are generating those)
     `halfmove_clock` is not updated
     """
-    retro_turn: chess.Color
-    unmove_stack: List[UnMove] = []
-    _retrostack: List[_RetrogradeBoardState] = []
-    pockets: Tuple[RetrogradeBoardPocket, RetrogradeBoardPocket]
-    allow_ep: bool
-    uncastling_rights: chess.Bitboard = BB_EMPTY # containing the position of the ROOKS.
 
     def __init__(self, 
                 fen: Optional[str] = chess.STARTING_FEN, 
@@ -283,8 +277,12 @@ class RetrogradeBoard(chess.Board):
                 allow_ep: bool = False,
                 uncastling_rights: str = "") -> None:
         super().__init__(fen)
+        self.unmove_stack: List[UnMove] = []
+        self._retrostack: List[_RetrogradeBoardState] = []
+        self.uncastling_rights = BB_EMPTY # containing the position of the ROOKS.
+        self.glued_pieces = chess.SquareSet(BB_EMPTY) # containing the position of the ROOKs and KINGs that cannot unmove since they uncastled.
         self.pockets = (RetrogradeBoardPocket(pocket_b), RetrogradeBoardPocket(pocket_w))
-        self.retro_turn = not self.turn
+        self.retro_turn: chess.Color = not self.turn
         self.allow_ep = allow_ep
         if "K" in uncastling_rights:
             self.uncastling_rights |= BB_SQUARES[chess.F1]
@@ -301,7 +299,8 @@ class RetrogradeBoard(chess.Board):
                 str(self.pockets[BLACK]), str(self.pockets[WHITE]),
                 # Included to be taken in count for `eq`
                 self.allow_ep,
-                self.uncastling_rights)
+                self.uncastling_rights,
+                self.glued_pieces)
 
     def is_valid(self) -> bool:
         """
@@ -322,6 +321,7 @@ class RetrogradeBoard(chess.Board):
         rboard.pockets = (self.pockets[WHITE].copy(), self.pockets[BLACK].copy())
         rboard.allow_ep = self.allow_ep
         rboard.uncastling_rights = chess.flip_vertical(self.uncastling_rights)
+        rboard.glued_pieces = self.glued_pieces.mirror()
         return rboard
 
     def retropop(self) -> UnMove:
@@ -388,9 +388,11 @@ class RetrogradeBoard(chess.Board):
                 rook_to_square = chess.H1 if self.retro_turn == WHITE else chess.H8
             rook_from_bb = BB_SQUARES[rook_from_square]
             rook_to_bb = BB_SQUARES[rook_to_square]
-            # Update castling and uncastling rights
+            # Update castling, uncastling rights and glued pieces
             self.uncastling_rights ^= rook_from_bb
             self.castling_rights |= rook_to_bb
+            self.glued_pieces.add(unmove.to_square)
+            self.glued_pieces.add(rook_to_square)
             # King already moved to the right square, only rook left.
             self._remove_piece_at(rook_from_square)
             self._set_piece_at(rook_to_square, chess.ROOK, self.retro_turn)
@@ -426,6 +428,8 @@ class RetrogradeBoard(chess.Board):
         # Generate piece unmoves.
         non_pawns = our_pieces & ~self.pawns & from_mask
         for from_square in scan_reversed(non_pawns):
+            if from_square in self.glued_pieces:
+                continue
             unmoves_mask = self.attacks_mask(from_square) & ~self.occupied & to_mask
             for to_square in scan_reversed(unmoves_mask):
                 yield UnMove(from_square, to_square)
@@ -673,12 +677,14 @@ class _RetrogradeBoardState(chess._BoardState[RetrogradeBoard]):
         self.pockets_b = rboard.pockets[BLACK].copy()
         self.retro_turn = rboard.retro_turn
         self.uncastling_rights = rboard.uncastling_rights
+        self.glued_pieces = copy.deepcopy(rboard.glued_pieces)
 
     def restore(self, rboard: RetrogradeBoard) -> None:
         super().restore(rboard)
         rboard.pockets = (self.pockets_b.copy(), self.pockets_w.copy())
         rboard.retro_turn = self.retro_turn
         rboard.uncastling_rights = self.uncastling_rights
+        rboard.glued_pieces = self.glued_pieces
 
 ######
 #Main#
