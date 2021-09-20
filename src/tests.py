@@ -552,9 +552,9 @@ class TestRetrogradeBoard(unittest.TestCase):
     # Helper functions #
     ####################
 
-    def check_pos_unmoves(self, fen: str, unmoves: list, pocket_b: str = "", pocket_w: str = "", allow_ep: bool = False, debug: bool = False):
+    def check_pos_unmoves(self, fen: str, unmoves: list, pocket_b: str = "", pocket_w: str = "", allow_ep: bool = False, debug: bool = False, uncastling_rights=""):
         """Check if the rboard with the given `fen` has only the `unmoves` legals."""
-        retrogradeboard = RetrogradeBoard(fen=fen,pocket_b=pocket_b,pocket_w=pocket_w,allow_ep=allow_ep)
+        retrogradeboard = RetrogradeBoard(fen=fen,pocket_b=pocket_b,pocket_w=pocket_w,allow_ep=allow_ep,uncastling_rights=uncastling_rights)
         if debug:
             print("first retroboard")
             retrogradeboard.pp()
@@ -716,6 +716,19 @@ class TestRetrogradeBoard(unittest.TestCase):
     def test_en_passant_impossible(self):
         """En passant unmove is legal, but the move producing the en passant is not"""
         self.check_pos_unmoves("4k3/nn6/K3P2r/nn6/8/8/8/8 b - - 0 1", ["a6b6", "Pa6b6", "e6e5", "Pe6d5", "Pe6f5"], pocket_b="P", allow_ep=True)
+
+    def test_uncastling_possible(self):
+        """Uncastling is possible"""
+        self.check_pos_unmoves("1k6/8/8/8/8/8/5n2/3n1RK1 b - - 0 1", ["g1e1", "g1h1", "g1h2", "g1g2", "f1e1"], uncastling_rights="K")
+
+    def test_uncastling_impossible(self):
+        """Uncastling is impossible"""
+        # Final king square is attacked
+        self.check_pos_unmoves("1k2r3/8/8/8/8/8/5n2/3n1RK1 b - - 0 1", ["g1h1", "g1h2", "g1g2", "f1e1"], uncastling_rights="K")
+        self.check_pos_unmoves("4r2k/8/8/8/8/8/3n4/2KR1n2 b - - 0 1", ["c1b1", "c1b2", "c1c2", "d1e1"], uncastling_rights="Q")
+        # King passing by an attacked square 
+        self.check_pos_unmoves("1k6/8/8/8/8/8/5r2/3n1RK1 b - - 0 1", ["g1h1", "g1h2", "g1g2", "f1e1"], uncastling_rights="K")
+        self.check_pos_unmoves("7k/8/8/8/8/8/3r4/2KR1n2 b - - 0 1", ["c1b1", "c1b2", "c1c2", "d1e1"], uncastling_rights="Q")
 
     def test_legal_double_queens_impossible(self):
         """There can't be legal unmove when two queens are checking and *no uncapture + unpromotion*"""

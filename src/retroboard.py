@@ -532,7 +532,7 @@ class RetrogradeBoard(chess.Board):
                     self.retro_attacked_for_king(king_to, self.occupied ^ king ^ rook ^ rook_to)):
                 yield UnMove(msb(king), msb(king_to))
 
-    def retro_attacked_for_king(self, path: Bitboard, occupied: Bitboard) -> bool:
+    def retro_attacked_for_king(self, path: chess.Bitboard, occupied: chess.Bitboard) -> bool:
         return any(self._attackers_mask(not self.retro_turn, sq, occupied) for sq in scan_reversed(path))
 
     def generate_pseudo_legal_uncaptures(self, from_square: Square, to_square: Square, unpromotion: bool = False) -> Iterator[UnMove]:
@@ -624,7 +624,8 @@ class RetrogradeBoard(chess.Board):
         Check if an unmove does not give check.
         Only work if there's at most one checker.
         """
-
+        if self.is_castling(unmove):
+            return True
         # If the unmove is a unpromotion but gives check, return False
         pawn_unmove = bool(unmove.unpromotion or self.piece_type_at(unmove.from_square) == chess.PAWN)
         if (pawn_unmove and
