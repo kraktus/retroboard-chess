@@ -643,6 +643,10 @@ class TestRetrogradeBoard(unittest.TestCase):
         """Check legality of basic en-passant unmove, when one is not retrolegal"""
         self.check_pos_unmoves("4k1b1/8/4P3/4p3/8/n7/Kn6/nn6 b - - 0 1", ["Pe6d5", "Pe6f5", "a2b3", "Pa2b3"], allow_ep=True, pocket_b="P")
 
+    def test_legal_unmoves_no_en_passant_square_blocked(self):
+        """En-passant cannot be legal, because the awn uncaptured cannot move two square back (piece on the square)"""
+        self.check_pos_unmoves("7k/4n3/4P3/8/8/8/nn6/Kn6 b - - 0 1", ["Pe6d5", "Pe6f5", "e6e5"], allow_ep=True, pocket_b="P")
+
     def test_legal_unmoves_pin(self):
         """The knight is pinned"""
         self.check_pos_unmoves("3k1N1R/8/7p/8/8/8/8/K7 b - - 0 1", ["h8g8", "h8h7", "a1b1", "a1b2", "a1a2"])
