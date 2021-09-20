@@ -379,13 +379,20 @@ class RetrogradeBoard(chess.Board):
         diff = chess.square_file(unmove.from_square) - chess.square_file(unmove.to_square)
         if piece_type == chess.KING and abs(diff) > 1:
             a_side = chess.square_file(unmove.from_square) == 2
-            # King already moved to the right square, only rook left.
             if a_side:
-                self._remove_piece_at(chess.D1 if self.retro_turn == WHITE else chess.D8)
-                self._set_piece_at(chess.A1 if self.retro_turn == WHITE else chess.A8, chess.ROOK, self.retro_turn)
+                rook_from_square = chess.D1 if self.retro_turn == WHITE else chess.D8
+                rook_to_square = chess.A1 if self.retro_turn == WHITE else chess.A8
             else:
-                self._remove_piece_at(chess.F1 if self.retro_turn == WHITE else chess.F8)
-                self._set_piece_at(chess.H1 if self.retro_turn == WHITE else chess.H8, chess.ROOK, self.retro_turn)
+                rook_from_square = chess.F1 if self.retro_turn == WHITE else chess.F8
+                rook_to_square = chess.H1 if self.retro_turn == WHITE else chess.H8
+            rook_from_bb = BB_SQUARES[rook_from_square]
+            rook_to_bb = BB_SQUARES[rook_to_square]
+            # Update castling and uncastling rights
+            self.uncastling_rights ^= rook_from_bb
+            self.castling_rights |= rook_to_bb
+            # King already moved to the right square, only rook left.
+            self._remove_piece_at(rook_from_square)
+            self._set_piece_at(rook_to_square, chess.ROOK, self.retro_turn)
         # Uncaptures.
         if unmove.uncapture:
             self._set_piece_at(unmove.from_square, unmove.uncapture, not self.retro_turn)
