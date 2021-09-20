@@ -1,10 +1,10 @@
 # Retroboard
 
-A chess retrograde move generator heavily based on the python-chess library.
+A chess retrograde move generator based on the python-chess library internals.
 
 ## Status
 
-Castling is not supported for the moment. Strong test suite but lack of comparaison of perft result against a trusted source.
+Strong test suite but lack of comparaison of perft result against a trusted source.
 
 ## Installation
 
